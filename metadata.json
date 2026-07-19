@@ -1,0 +1,6 @@
+{
+  "name": "EduRank",
+  "description": "Education center management system with point tracking, rankings, and teacher spreadsheet panel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

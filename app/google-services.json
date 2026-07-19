@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1049141928852",
+    "project_id": "score-2e36e",
+    "storage_bucket": "score-2e36e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1049141928852:android:c5604aae64b472c20c6581",
+        "android_client_info": {
+          "package_name": "com.aistudio.edurank.kxmpzq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAaLaSEfqjUZxUobaJRMHZZG4W3YIRpnJs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

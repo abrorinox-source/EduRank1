@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Checks if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: Retrieves the user document from the users collection
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Helper: Checks user role
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    // Helper: Checks if user is an admin or a teacher
+    function isStaff() {
+      return hasRole('teacher') || hasRole('admin');
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      // Any authenticated user can read profiles (needed for rankings, peer lists, and transfers)
+      allow read: if isAuthenticated();
+
+      // Users can only update their own contact details (phone, email); 
+      // direct modification of 'points' or 'role' fields is STRICTLY forbidden for students!
+      allow write: if hasRole('admin') || 
+                   (request.auth.uid == userId && 
+                    !request.resource.data.diff(resource.data).affectedKeys().hasAny(['points', 'role', 'status']));
+
+      // Teachers can create or update student users in groups they manage
+      allow create, update: if hasRole('teacher') && request.resource.data.role == 'student';
+    }
+
+    // --- Groups Collection ---
+    match /groups/{groupId} {
+      // Anyone can read group details (needed for signup)
+      allow read: if true;
+
+      // Admins and teachers can create groups (teachers must set themselves as teacher)
+      allow create: if hasRole('admin') || (hasRole('teacher') && request.resource.data.teacherId == request.auth.uid);
+      allow delete: if hasRole('admin') || (hasRole('teacher') && resource.data.teacherId == request.auth.uid);
+      allow update: if hasRole('admin') || (hasRole('teacher') && resource.data.teacherId == request.auth.uid);
+    }
+
+    // --- Point Transactions Collection ---
+    match /point_transactions/{txId} {
+      // Staff can view all point history; Students can only view transactions they participated in
+      allow read: if isStaff() || 
+                  (isAuthenticated() && 
+                   (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid));
+
+      // Writing a point transaction (transfer or manual adjustment)
+      allow create: if isAuthenticated() && (
+        // Case 1: Student point transfer
+        (request.resource.data.type == 'transfer' && 
+         request.resource.data.fromUserId == request.auth.uid && 
+         request.resource.data.amount > 0 &&
+         // Enforce same group restriction
+         get(/databases/$(database)/documents/users/$(request.resource.data.fromUserId)).data.groupId == 
+         get(/databases/$(database)/documents/users/$(request.resource.data.toUserId)).data.groupId) 
+        ||
+        // Case 2: Teacher/Admin manual points adjustment
+        (request.resource.data.type in ['manual_add', 'manual_subtract'] && isStaff())
+      );
+
+      // Point transaction records can never be updated or deleted to preserve audit trails
+      allow update, delete: if false;
+    }
+  }
+}
